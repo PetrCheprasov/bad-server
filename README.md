@@ -1,5 +1,7 @@
 # Проектная работа "WebLarek. Плохой сервер.", спринт 17
-ссылка на GitHub:мhttps://github.com/PetrCheprasov/bad-server.git
+ссылка на GitHub: https://github.com/PetrCheprasov/bad-server.git
+Чепрасов П.В.
+когорта 45
 ## Подготовка к работе
 1. Склонировать репозиторий
 2. Запустить docker

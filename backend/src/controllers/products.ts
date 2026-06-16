@@ -1,31 +1,40 @@
 import { NextFunction, Request, Response } from 'express'
 import { constants } from 'http2'
 import { Error as MongooseError } from 'mongoose'
-import { join } from 'path'
+import { basename, join } from 'path'
 import BadRequestError from '../errors/bad-request-error'
 import ConflictError from '../errors/conflict-error'
 import NotFoundError from '../errors/not-found-error'
 import Product from '../models/product'
+import normalizeLimit from '../utils/normalizeLimit'
 import movingFile from '../utils/movingFile'
 
 // GET /product
-const getProducts = async (req: Request, res: Response, next: NextFunction) => {
+const getProducts = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const { page = 1, limit = 5 } = req.query
+        const pageSize = normalizeLimit(limit, 5)
         const options = {
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (Number(page) - 1) * pageSize,
+            limit: pageSize,
         }
         const products = await Product.find({}, null, options)
         const totalProducts = await Product.countDocuments({})
-        const totalPages = Math.ceil(totalProducts / Number(limit))
+        const totalPages = Math.ceil(totalProducts / pageSize)
+
+        res.set('Cache-Control', 'public, max-age=300')
+
         return res.send({
             items: products,
             pagination: {
                 totalProducts,
                 totalPages,
                 currentPage: Number(page),
-                pageSize: Number(limit),
+                pageSize,
             },
         })
     } catch (err) {
@@ -45,7 +54,7 @@ const createProduct = async (
         // Переносим картинку из временной папки
         if (image) {
             movingFile(
-                image.fileName,
+                basename(image.fileName),
                 join(__dirname, `../public/${process.env.UPLOAD_PATH_TEMP}`),
                 join(__dirname, `../public/${process.env.UPLOAD_PATH}`)
             )
@@ -86,7 +95,7 @@ const updateProduct = async (
         // Переносим картинку из временной папки
         if (image) {
             movingFile(
-                image.fileName,
+                basename(image.fileName),
                 join(__dirname, `../public/${process.env.UPLOAD_PATH_TEMP}`),
                 join(__dirname, `../public/${process.env.UPLOAD_PATH}`)
             )
