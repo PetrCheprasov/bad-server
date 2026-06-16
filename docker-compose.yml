@@ -26,6 +26,12 @@ services:
       context: backend
     env_file:
       - backend/.env
+    environment:
+      ORIGIN_ALLOW: http://localhost:5173
+      RATE_LIMITED: "true"
+      RATE_LIMIT_POINTS: 3
+      RATE_LIMIT_DURATION: 5
+      RATE_LIMIT_BLOCK: 15
     volumes:
       - ./backend/src:/app/src
       - public:/app/src/public

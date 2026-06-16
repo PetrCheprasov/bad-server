@@ -191,8 +191,21 @@ const updateCurrentUser = async (
     next: NextFunction
 ) => {
     const userId = res.locals.user._id
+    const { name, email, password } = req.body
+    const updateData: { name?: string; email?: string; password?: string } = {}
+
+    if (name !== undefined) {
+        updateData.name = name
+    }
+    if (email !== undefined) {
+        updateData.email = email
+    }
+    if (password !== undefined) {
+        updateData.password = password
+    }
+
     try {
-        const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
+        const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
             new: true,
         }).orFail(
             () =>
