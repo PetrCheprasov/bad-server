@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import mongoose, { FilterQuery } from 'mongoose'
+import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
@@ -14,8 +15,6 @@ const ALLOWED_SORT_FIELDS = [
     'lastOrderDate',
 ]
 
-// eslint-disable-next-line max-len
-// Get GET /customers?page=2&limit=5&sort=totalAmount&order=desc&registrationDateFrom=2023-01-01&registrationDateTo=2023-12-31&lastOrderDateFrom=2023-01-01&lastOrderDateTo=2023-12-31&totalAmountFrom=100&totalAmountTo=1000&orderCountFrom=1&orderCountTo=10
 export const getCustomers = async (
     req: Request,
     res: Response,
@@ -102,20 +101,41 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const searchRegex = new RegExp(escapeRegExp(search as string), 'i')
+            const rawSearch = Array.isArray(search) ? search[0] : search
+
+            if (typeof rawSearch !== 'string') {
+                throw new BadRequestError('Некорректный параметр search')
+            }
+
+            const searchRegex = new RegExp(escapeRegExp(rawSearch), 'i')
             const orders = await Order.find(
-                mongoose.trusted({
-                    $or: [{ deliveryAddress: searchRegex }],
-                }),
+                { deliveryAddress: searchRegex },
                 '_id'
             )
-
             const orderIds = orders.map((order) => order._id)
 
-            filters.$or = mongoose.trusted([
+            const orConditions: FilterQuery<Partial<IUser>>[] = [
                 { name: searchRegex },
-                { lastOrder: { $in: orderIds } },
-            ])
+            ]
+
+            if (orderIds.length > 0) {
+                const usersWithLastOrder = await User.collection
+                    .find(
+                        { lastOrder: { $in: orderIds } },
+                        { projection: { _id: 1 } }
+                    )
+                    .toArray()
+
+                usersWithLastOrder.forEach((user) => {
+                    orConditions.push({ _id: user._id })
+                })
+            }
+
+            if (orConditions.length === 1) {
+                filters.name = searchRegex
+            } else {
+                filters.$or = mongoose.trusted(orConditions)
+            }
         }
 
         const sort: { [key: string]: 1 | -1 } = {}
