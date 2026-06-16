@@ -10,7 +10,6 @@ import mongoose from 'mongoose'
 import path from 'path'
 import { DB_ADDRESS, ORIGIN_ALLOW } from './config'
 import errorHandler from './middlewares/error-handler'
-import rateLimiter from './middlewares/rate-limiter'
 import serveStatic from './middlewares/serverStatic'
 import routes from './routes'
 
@@ -35,7 +34,6 @@ app.use(
         credentials: true,
     })
 )
-app.use(rateLimiter)
 app.use(serveStatic(path.join(__dirname, 'public')))
 app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
